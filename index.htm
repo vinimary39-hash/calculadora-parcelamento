@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulação de Parcelamento</title>  
+  <title>Simulação de Parcelamento</title>
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --text:#172033; --muted:#667085;
@@ -26,7 +26,7 @@
       padding:20px; box-shadow:0 6px 24px rgba(20,35,70,.06)
     }
     .formgrid{
-      display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px
+      display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px
     }
     label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:#344054}
     input{
@@ -58,9 +58,11 @@
     .parcelas{font-weight:800;color:var(--accent)}
     .total{font-weight:800}
     .foot{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.45}
+    @media(max-width:900px){
+      .formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
     @media(max-width:760px){
       body{padding:12px}
-      .formgrid{grid-template-columns:1fr 1fr}
       .summary{grid-template-columns:1fr}
       h1{font-size:23px}
     }
@@ -129,18 +131,23 @@
   </section>
 
   <div class="foot">
-  <strong>Simulação:</strong> os valores apresentados são estimativos.
-  O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
-  no momento da formalização do parcelamento.
-</div>
+    <strong>Simulação:</strong> os valores apresentados são estimativos.
+    O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
+    no momento da formalização do parcelamento.
+  </div>
 </div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const divida = $('divida'), entrada = $('entrada'), percentual = $('percentual'), juros = $('juros');
+
+  const divida = $('divida');
+  const entrada = $('entrada');
+  const percentual = $('percentual');
+  const juros = $('juros');
   const maxParcelas = $('maxParcelas');
-  const tabela = $('tabela'), mensagem = $('mensagem');
+  const tabela = $('tabela');
+  const mensagem = $('mensagem');
   const tituloParcelas = $('tituloParcelas');
 
   const brl = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
@@ -152,7 +159,10 @@
     if (v.includes(',')) v = v.replace(/\./g,'').replace(',','.');
     return Number(v) || 0;
   }
-  function f2(n){ return (Number(n)||0).toFixed(2).replace('.',','); }
+
+  function f2(n){
+    return (Number(n)||0).toFixed(2).replace('.',',');
+  }
 
   let origem = 'percentual';
 
@@ -161,6 +171,12 @@
     let pct = Math.max(nBR(percentual.value),0);
     let ent = Math.max(nBR(entrada.value),0);
     const taxa = Math.max(nBR(juros.value),0)/100;
+
+    let limite = parseInt(maxParcelas.value,10);
+    if (!Number.isFinite(limite)) limite = 12;
+    limite = Math.min(Math.max(limite,1),18);
+
+    tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x';
 
     if (origem === 'entrada') {
       pct = total > 0 ? (ent/total)*100 : 0;
@@ -178,6 +194,7 @@
     }
 
     const saldo = Math.max(total-ent,0);
+
     $('sDivida').textContent = brl.format(total);
     $('sEntrada').textContent = brl.format(ent);
     $('sSaldo').textContent = brl.format(saldo);
@@ -187,17 +204,24 @@
     } else if (pct === 0 || ent === 0) {
       mensagem.innerHTML = '<span class="low">SEM ENTRADA / BAIXA RENDA</span> — saldo total será parcelado.';
     } else {
-      mensagem.innerHTML = 'Entrada de <strong>'+brl.format(ent)+'</strong> representa <strong>'+f2((ent/total)*100)+'%</strong> do valor da dívida.';
+      mensagem.innerHTML =
+        'Entrada de <strong>'+brl.format(ent)+'</strong> representa <strong>'+
+        f2((ent/total)*100)+'%</strong> do valor da dívida.';
     }
 
-    tabela.innerHTML = 'const limite = Math.min(Math.max(parseInt(maxParcelas.value) || 12, 1), 18);
-tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x';';
+    tabela.innerHTML = '';
+
     for(let n=1;n<=limite;n++){
       let parcela = 0;
+
       if (saldo > 0) {
-        if (taxa === 0) parcela = saldo/n;
-        else parcela = saldo * (taxa*Math.pow(1+taxa,n))/(Math.pow(1+taxa,n)-1);
+        if (taxa === 0) {
+          parcela = saldo/n;
+        } else {
+          parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
+        }
       }
+
       const totalParcelado = parcela*n;
       const jurosTotal = Math.max(totalParcelado-saldo,0);
       const montante = ent + totalParcelado;
@@ -208,6 +232,7 @@ tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 
         '<td>'+brl.format(parcela)+'</td>'+
         '<td>'+brl.format(jurosTotal)+'</td>'+
         '<td class="total">'+brl.format(montante)+'</td>';
+
       tabela.appendChild(tr);
     }
   }
@@ -216,8 +241,15 @@ tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 
   juros.addEventListener('input', calcular);
   maxParcelas.addEventListener('input', calcular);
 
-  entrada.addEventListener('input', () => { origem='entrada'; calcular(); });
-  percentual.addEventListener('input', () => { origem='percentual'; calcular(); });
+  entrada.addEventListener('input', () => {
+    origem='entrada';
+    calcular();
+  });
+
+  percentual.addEventListener('input', () => {
+    origem='percentual';
+    calcular();
+  });
 
   [entrada, percentual, juros].forEach(el => {
     el.addEventListener('blur', () => {
@@ -225,6 +257,14 @@ tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 
       el.value = f2(v);
       calcular();
     });
+  });
+
+  maxParcelas.addEventListener('blur', () => {
+    let v = parseInt(maxParcelas.value,10);
+    if (!Number.isFinite(v)) v = 12;
+    v = Math.min(Math.max(v,1),18);
+    maxParcelas.value = v;
+    calcular();
   });
 
   calcular();
