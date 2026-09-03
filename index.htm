@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Entrada e Parcelamento</title>
+  <title>Simulação de Parcelamento</title>  
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --text:#172033; --muted:#667085;
@@ -73,7 +73,7 @@
 <div class="wrap">
   <div class="top">
     <div>
-      <h1>Calculadora de Entrada e Parcelamento</h1>
+      <h1>Simulação de Parcelamento</h1>
       <div class="sub">Entrada padrão: 27,00% • 0% = sem entrada / baixa renda</div>
     </div>
   </div>
@@ -96,6 +96,10 @@
         <label for="juros">Juros ao mês (%)</label>
         <input id="juros" inputmode="decimal" value="1,00">
       </div>
+      <div>
+        <label for="maxParcelas">Máximo de parcelas</label>
+        <input id="maxParcelas" type="number" min="1" max="18" step="1" value="12">
+      </div>
     </div>
 
     <div id="mensagem" class="hint">Informe o valor da dívida para calcular.</div>
@@ -108,7 +112,7 @@
   </section>
 
   <section class="card tableCard">
-    <div class="tableTitle">Opções de parcelamento — 1x até 12x</div>
+    <div class="tableTitle" id="tituloParcelas">Opções de parcelamento — 1x até 12x</div>
     <div class="scroll">
       <table>
         <thead>
@@ -125,16 +129,19 @@
   </section>
 
   <div class="foot">
-    Cálculo das parcelas pelo sistema de parcelas fixas (Tabela Price), usando a taxa mensal informada.
-    O valor de juros exibido é a diferença entre o total das parcelas e o saldo financiado.
-  </div>
+  <strong>Simulação:</strong> os valores apresentados são estimativos.
+  O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
+  no momento da formalização do parcelamento.
+</div>
 </div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const divida = $('divida'), entrada = $('entrada'), percentual = $('percentual'), juros = $('juros');
+  const maxParcelas = $('maxParcelas');
   const tabela = $('tabela'), mensagem = $('mensagem');
+  const tituloParcelas = $('tituloParcelas');
 
   const brl = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 
@@ -183,8 +190,9 @@
       mensagem.innerHTML = 'Entrada de <strong>'+brl.format(ent)+'</strong> representa <strong>'+f2((ent/total)*100)+'%</strong> do valor da dívida.';
     }
 
-    tabela.innerHTML = '';
-    for(let n=1;n<=12;n++){
+    tabela.innerHTML = 'const limite = Math.min(Math.max(parseInt(maxParcelas.value) || 12, 1), 18);
+tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x';';
+    for(let n=1;n<=limite;n++){
       let parcela = 0;
       if (saldo > 0) {
         if (taxa === 0) parcela = saldo/n;
@@ -206,6 +214,7 @@
 
   divida.addEventListener('input', calcular);
   juros.addEventListener('input', calcular);
+  maxParcelas.addEventListener('input', calcular);
 
   entrada.addEventListener('input', () => { origem='entrada'; calcular(); });
   percentual.addEventListener('input', () => { origem='percentual'; calcular(); });
