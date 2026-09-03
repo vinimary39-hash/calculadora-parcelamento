@@ -57,7 +57,7 @@
     tbody tr:last-child td{border-bottom:0}
     .parcelas{font-weight:800;color:var(--accent)}
     .total{font-weight:800}
-    .foot{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.45}
+    .foot{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.45}
     @media(max-width:900px){
       .formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
@@ -214,13 +214,16 @@
     for(let n=1;n<=limite;n++){
       let parcela = 0;
 
-      if (saldo > 0) {
-        if (taxa === 0) {
-          parcela = saldo/n;
-        } else {
-          parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
-        }
-      }
+     if (saldo > 0) {
+    if (taxa === 0) {
+        parcela = saldo/n;
+    } else {
+        parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
+
+        // Margem de segurança da simulação: +0,10%
+        parcela = parcela * 1.001;
+    }
+}
 
       const totalParcelado = parcela*n;
       const jurosTotal = Math.max(totalParcelado-saldo,0);
