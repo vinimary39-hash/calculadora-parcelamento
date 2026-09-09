@@ -7,7 +7,7 @@
   <style>
     :root{
       --bg:#f4f7fb; --card:#fff; --text:#172033; --muted:#667085;
-      --border:#dfe5ee; --accent:#1457d9; --accent2:#eef4ff; --ok:#087a55;
+      --border:#dfe5ee; --accent:#1457d9; --accent2:#eef4ff; --ok:#087a55; --warn:#9a3412;
     }
     *{box-sizing:border-box}
     body{
@@ -34,6 +34,9 @@
       font-size:17px;outline:none;background:#fff;color:var(--text)
     }
     input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(20,87,217,.12)}
+    .checkWrap{display:flex;align-items:center;gap:10px;min-height:46px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fafcff}
+    .checkWrap input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--accent)}
+    .checkWrap label{margin:0;cursor:pointer;font-size:14px}
     .hint{
       margin-top:14px;padding:11px 13px;border-radius:10px;background:#f6f8fb;
       color:#475467;font-size:14px
@@ -76,7 +79,7 @@
   <div class="top">
     <div>
       <h1>Simulação de Parcelamento</h1>
-      <div class="sub">Entrada padrão: 27,00% • 0% = sem entrada / baixa renda</div>
+      <div class="sub">Entrada padrão: 27,00% • 0% = sem entrada / baixa renda • Parcela mínima normal: R$ 50,00</div>
     </div>
   </div>
 
@@ -133,7 +136,8 @@
   <div class="foot">
     <strong>Simulação:</strong> os valores apresentados são estimativos.
     O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
-    no momento da formalização do parcelamento.
+    no momento da formalização do parcelamento.<br>
+    <strong>Versão 1.03</strong>
   </div>
 </div>
 
@@ -176,8 +180,6 @@
     if (!Number.isFinite(limite)) limite = 12;
     limite = Math.min(Math.max(limite,1),18);
 
-    tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x';
-
     if (origem === 'entrada') {
       pct = total > 0 ? (ent/total)*100 : 0;
       percentual.value = f2(pct);
@@ -194,40 +196,54 @@
     }
 
     const saldo = Math.max(total-ent,0);
+    // Baixa renda é identificada automaticamente por entrada zerada (0%).
+    const baixaRenda = total > 0 && (pct === 0 || ent === 0);
 
     $('sDivida').textContent = brl.format(total);
     $('sEntrada').textContent = brl.format(ent);
     $('sSaldo').textContent = brl.format(saldo);
 
+    let textoMensagem = '';
     if (!total) {
-      mensagem.innerHTML = 'Informe o valor da dívida para calcular.';
-    } else if (pct === 0 || ent === 0) {
-      mensagem.innerHTML = '<span class="low">SEM ENTRADA / BAIXA RENDA</span> — saldo total será parcelado.';
+      textoMensagem = 'Informe o valor da dívida para calcular.';
+    } else if (baixaRenda) {
+      textoMensagem = '<span class="low">SEM ENTRADA / BAIXA RENDA</span> — saldo total será parcelado e não se aplica o mínimo de R$ 50,00 por parcela.';
     } else {
-      mensagem.innerHTML =
+      textoMensagem =
         'Entrada de <strong>'+brl.format(ent)+'</strong> representa <strong>'+
         f2((ent/total)*100)+'%</strong> do valor da dívida.';
     }
 
+
     tabela.innerHTML = '';
+    let opcoesExibidas = 0;
+    let maiorParcelaExibida = 0;
+    let houveBloqueioMinimo = false;
 
     for(let n=1;n<=limite;n++){
       let parcela = 0;
 
-     if (saldo > 0) {
-    if (taxa === 0) {
-        parcela = saldo/n;
-    } else {
-        parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
+      if (saldo > 0) {
+        if (taxa === 0) {
+          parcela = saldo/n;
+        } else {
+          parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
+          // Margem conservadora de 0,10% para manter a simulação levemente acima do SAP.
+          parcela *= 1.001;
+        }
+      }
 
-        // Margem de segurança da simulação: +0,10%
-        parcela = parcela * 1.001;
-    }
-}
+      if (!baixaRenda && saldo > 0 && parcela < 50) {
+        houveBloqueioMinimo = true;
+        continue;
+      }
 
       const totalParcelado = parcela*n;
       const jurosTotal = Math.max(totalParcelado-saldo,0);
       const montante = ent + totalParcelado;
+
+      opcoesExibidas++;
+      maiorParcelaExibida = n;
 
       const tr = document.createElement('tr');
       tr.innerHTML =
@@ -238,6 +254,24 @@
 
       tabela.appendChild(tr);
     }
+
+    if (baixaRenda) {
+      tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x • Baixa renda';
+    } else if (opcoesExibidas > 0) {
+      tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + maiorParcelaExibida + 'x • Parcela mínima R$ 50,00';
+    } else {
+      tituloParcelas.textContent = 'Opções de parcelamento • Parcela mínima R$ 50,00';
+    }
+
+    if (houveBloqueioMinimo && total) {
+      textoMensagem += ' As opções que resultariam em parcela menor que <strong>R$ 50,00</strong> foram ocultadas.';
+    }
+
+    if (!baixaRenda && total && saldo > 0 && opcoesExibidas === 0) {
+      textoMensagem += ' <span class="low">Nenhuma opção disponível:</span> o saldo parcelado é inferior ao mínimo permitido de R$ 50,00.';
+    }
+
+    mensagem.innerHTML = textoMensagem;
   }
 
   divida.addEventListener('input', calcular);
