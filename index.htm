@@ -72,6 +72,28 @@
     @media(max-width:460px){
       .formgrid{grid-template-columns:1fr}
     }
+
+    .aviso-simulacao{margin:16px 0;padding:17px;border:3px solid #b91c1c;border-radius:12px;background:#fff1f2;color:#a10e0e;text-align:center;font-size:22px;line-height:1.4;font-weight:900}
+    .aviso-simulacao small{display:block;font-size:15px;margin-top:6px;font-weight:800}
+    .acoes{margin:18px 0}.btn-imprimir{border:0;background:#1457d9;color:#fff;font-size:16px;font-weight:800;padding:14px 22px;border-radius:10px;cursor:pointer}.btn-imprimir:disabled{opacity:.5;cursor:not-allowed}
+    .data-impressao{display:none}
+    @media print{
+      @page{size:A4 portrait;margin:12mm}
+      body{background:#fff;padding:0;font-size:11px}
+      .wrap{max-width:none}.top{margin-bottom:8px}
+      h1{font-size:21px}.sub{font-size:11px}
+      .card{box-shadow:none;border:1px solid #aaa;padding:10px;border-radius:5px;break-inside:avoid}
+      .formgrid,.hint,.acoes{display:none!important}
+      .aviso-simulacao{font-size:21px!important;color:#b91c1c!important;border:3px solid #b91c1c!important;background:#fff!important;padding:12px;margin:10px 0;font-weight:900!important}
+      .aviso-simulacao small{font-size:14px!important;font-weight:900!important}
+      .data-impressao{display:block;font-size:11px;margin:6px 0}
+      .summary{grid-template-columns:repeat(3,1fr);margin-top:4px;gap:7px}
+      .mini{padding:9px}.mini strong{font-size:15px}
+      .tableCard{margin-top:10px}.tableTitle{padding:9px}
+      .scroll{overflow:visible}table{min-width:0}th,td{padding:6px 7px;font-size:11px}th{position:static}
+      .foot{font-size:11px;margin-top:8px}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
   </style>
 </head>
 <body>
@@ -83,6 +105,8 @@
     </div>
   </div>
 
+  <div class="aviso-simulacao">ATENÇÃO: ISTO É APENAS UMA SIMULAÇÃO<small>Não representa acordo ou parcelamento contratado.</small></div>
+  <div class="data-impressao" id="dataImpressao"></div>
   <section class="card">
     <div class="formgrid">
       <div>
@@ -133,11 +157,12 @@
     </div>
   </section>
 
+  <div class="acoes"><button type="button" class="btn-imprimir" id="imprimir" disabled>🖨 Imprimir / Salvar em PDF</button></div>
   <div class="foot">
     <strong>Simulação:</strong> os valores apresentados são estimativos.
     O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
     no momento da formalização do parcelamento.<br>
-    <strong>Versão 1.03</strong>
+    <strong>Versão interna 1.04</strong>
   </div>
 </div>
 
@@ -216,6 +241,7 @@
 
 
     tabela.innerHTML = '';
+    $('imprimir').disabled = true;
     let opcoesExibidas = 0;
     let maiorParcelaExibida = 0;
     let houveBloqueioMinimo = false;
@@ -272,6 +298,7 @@
     }
 
     mensagem.innerHTML = textoMensagem;
+    $('imprimir').disabled = !(total > 0 && opcoesExibidas > 0);
   }
 
   divida.addEventListener('input', calcular);
@@ -304,6 +331,11 @@
     calcular();
   });
 
+  $('imprimir').addEventListener('click', () => {
+    if ($('imprimir').disabled) return;
+    $('dataImpressao').textContent = 'Data da simulação: ' + new Date().toLocaleString('pt-BR');
+    window.print();
+  });
   calcular();
 })();
 </script>
