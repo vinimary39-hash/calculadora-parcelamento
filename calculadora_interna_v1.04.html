@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulação de Parcelamento</title>
+  <style>
+    :root{
+      --bg:#f4f7fb; --card:#fff; --text:#172033; --muted:#667085;
+      --border:#dfe5ee; --accent:#1457d9; --accent2:#eef4ff; --ok:#087a55; --warn:#9a3412;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:24px; background:var(--bg); color:var(--text);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+    .wrap{max-width:980px;margin:auto}
+    .top{
+      display:flex;justify-content:space-between;align-items:end;gap:16px;
+      margin-bottom:18px;flex-wrap:wrap
+    }
+    h1{font-size:28px;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px}
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:20px; box-shadow:0 6px 24px rgba(20,35,70,.06)
+    }
+    .formgrid{
+      display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px
+    }
+    label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:#344054}
+    input{
+      width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:12px 13px;
+      font-size:17px;outline:none;background:#fff;color:var(--text)
+    }
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(20,87,217,.12)}
+    .checkWrap{display:flex;align-items:center;gap:10px;min-height:46px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fafcff}
+    .checkWrap input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--accent)}
+    .checkWrap label{margin:0;cursor:pointer;font-size:14px}
+    .hint{
+      margin-top:14px;padding:11px 13px;border-radius:10px;background:#f6f8fb;
+      color:#475467;font-size:14px
+    }
+    .hint strong{color:var(--ok)}
+    .low{font-weight:800;color:#9a3412}
+    .summary{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px
+    }
+    .mini{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fafcff}
+    .mini span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .mini strong{font-size:20px}
+    .tableCard{margin-top:18px;overflow:hidden;padding:0}
+    .tableTitle{padding:16px 18px;border-bottom:1px solid var(--border);font-weight:800}
+    .scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:650px}
+    th,td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:right}
+    th{background:#f8fafc;color:#344054;font-size:13px;position:sticky;top:0}
+    th:first-child,td:first-child{text-align:center}
+    tbody tr:hover{background:#fbfdff}
+    tbody tr:last-child td{border-bottom:0}
+    .parcelas{font-weight:800;color:var(--accent)}
+    .total{font-weight:800}
+    .foot{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.45}
+    @media(max-width:900px){
+      .formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:760px){
+      body{padding:12px}
+      .summary{grid-template-columns:1fr}
+      h1{font-size:23px}
+    }
+    @media(max-width:460px){
+      .formgrid{grid-template-columns:1fr}
+    }
+
+    .aviso-simulacao{margin:16px 0;padding:17px;border:3px solid #b91c1c;border-radius:12px;background:#fff1f2;color:#a10e0e;text-align:center;font-size:22px;line-height:1.4;font-weight:900}
+    .aviso-simulacao small{display:block;font-size:15px;margin-top:6px;font-weight:800}
+    .acoes{margin:18px 0}.btn-imprimir{border:0;background:#1457d9;color:#fff;font-size:16px;font-weight:800;padding:14px 22px;border-radius:10px;cursor:pointer}.btn-imprimir:disabled{opacity:.5;cursor:not-allowed}
+    .data-impressao{display:none}
+    @media print{
+      @page{size:A4 portrait;margin:12mm}
+      body{background:#fff;padding:0;font-size:11px}
+      .wrap{max-width:none}.top{margin-bottom:8px}
+      h1{font-size:21px}.sub{font-size:11px}
+      .card{box-shadow:none;border:1px solid #aaa;padding:10px;border-radius:5px;break-inside:avoid}
+      .formgrid,.hint,.acoes{display:none!important}
+      .aviso-simulacao{font-size:21px!important;color:#b91c1c!important;border:3px solid #b91c1c!important;background:#fff!important;padding:12px;margin:10px 0;font-weight:900!important}
+      .aviso-simulacao small{font-size:14px!important;font-weight:900!important}
+      .data-impressao{display:block;font-size:11px;margin:6px 0}
+      .summary{grid-template-columns:repeat(3,1fr);margin-top:4px;gap:7px}
+      .mini{padding:9px}.mini strong{font-size:15px}
+      .tableCard{margin-top:10px}.tableTitle{padding:9px}
+      .scroll{overflow:visible}table{min-width:0}th,td{padding:6px 7px;font-size:11px}th{position:static}
+      .foot{font-size:11px;margin-top:8px}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Simulação de Parcelamento</h1>
+      <div class="sub">Entrada padrão: 27,00% • 0% = sem entrada / baixa renda • Parcela mínima normal: R$ 50,00</div>
+    </div>
+  </div>
+
+  <div class="aviso-simulacao">ATENÇÃO: ISTO É APENAS UMA SIMULAÇÃO<small>Não representa acordo ou parcelamento contratado.</small></div>
+  <div class="data-impressao" id="dataImpressao"></div>
+  <section class="card">
+    <div class="formgrid">
+      <div>
+        <label for="divida">Valor total da dívida (R$)</label>
+        <input id="divida" inputmode="decimal" placeholder="Ex.: 1.253,71">
+      </div>
+      <div>
+        <label for="entrada">Entrada desejada (R$)</label>
+        <input id="entrada" inputmode="decimal" placeholder="Ex.: 500,00">
+      </div>
+      <div>
+        <label for="percentual">Percentual da entrada (%)</label>
+        <input id="percentual" inputmode="decimal" value="27,00">
+      </div>
+      <div>
+        <label for="juros">Juros ao mês (%)</label>
+        <input id="juros" inputmode="decimal" value="1,00">
+      </div>
+      <div>
+        <label for="maxParcelas">Máximo de parcelas</label>
+        <input id="maxParcelas" type="number" min="1" max="18" step="1" value="12">
+      </div>
+    </div>
+
+    <div id="mensagem" class="hint">Informe o valor da dívida para calcular.</div>
+
+    <div class="summary">
+      <div class="mini"><span>Valor da dívida</span><strong id="sDivida">R$ 0,00</strong></div>
+      <div class="mini"><span>Entrada</span><strong id="sEntrada">R$ 0,00</strong></div>
+      <div class="mini"><span>Saldo a parcelar</span><strong id="sSaldo">R$ 0,00</strong></div>
+    </div>
+  </section>
+
+  <section class="card tableCard">
+    <div class="tableTitle" id="tituloParcelas">Opções de parcelamento — 1x até 12x</div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Qtd. Parcelas</th>
+            <th>Valor da Parcela</th>
+            <th>Juros do Parcelamento</th>
+            <th>Montante Total</th>
+          </tr>
+        </thead>
+        <tbody id="tabela"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="acoes"><button type="button" class="btn-imprimir" id="imprimir" disabled>🖨 Imprimir / Salvar em PDF</button></div>
+  <div class="foot">
+    <strong>Simulação:</strong> os valores apresentados são estimativos.
+    O valor definitivo das parcelas, encargos e vencimentos será determinado pelo sistema
+    no momento da formalização do parcelamento.<br>
+    <strong>Versão interna 1.04</strong>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  const divida = $('divida');
+  const entrada = $('entrada');
+  const percentual = $('percentual');
+  const juros = $('juros');
+  const maxParcelas = $('maxParcelas');
+  const tabela = $('tabela');
+  const mensagem = $('mensagem');
+  const tituloParcelas = $('tituloParcelas');
+
+  const brl = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+
+  function nBR(v){
+    if (typeof v !== 'string') return Number(v)||0;
+    v = v.trim().replace(/\s/g,'');
+    if (!v) return 0;
+    if (v.includes(',')) v = v.replace(/\./g,'').replace(',','.');
+    return Number(v) || 0;
+  }
+
+  function f2(n){
+    return (Number(n)||0).toFixed(2).replace('.',',');
+  }
+
+  let origem = 'percentual';
+
+  function calcular(){
+    const total = Math.max(nBR(divida.value),0);
+    let pct = Math.max(nBR(percentual.value),0);
+    let ent = Math.max(nBR(entrada.value),0);
+    const taxa = Math.max(nBR(juros.value),0)/100;
+
+    let limite = parseInt(maxParcelas.value,10);
+    if (!Number.isFinite(limite)) limite = 12;
+    limite = Math.min(Math.max(limite,1),18);
+
+    if (origem === 'entrada') {
+      pct = total > 0 ? (ent/total)*100 : 0;
+      percentual.value = f2(pct);
+    } else {
+      ent = total * pct/100;
+      entrada.value = total > 0 ? f2(ent) : '';
+    }
+
+    if (ent > total && total > 0) {
+      ent = total;
+      entrada.value = f2(ent);
+      percentual.value = '100,00';
+      pct = 100;
+    }
+
+    const saldo = Math.max(total-ent,0);
+    // Baixa renda é identificada automaticamente por entrada zerada (0%).
+    const baixaRenda = total > 0 && (pct === 0 || ent === 0);
+
+    $('sDivida').textContent = brl.format(total);
+    $('sEntrada').textContent = brl.format(ent);
+    $('sSaldo').textContent = brl.format(saldo);
+
+    let textoMensagem = '';
+    if (!total) {
+      textoMensagem = 'Informe o valor da dívida para calcular.';
+    } else if (baixaRenda) {
+      textoMensagem = '<span class="low">SEM ENTRADA / BAIXA RENDA</span> — saldo total será parcelado e não se aplica o mínimo de R$ 50,00 por parcela.';
+    } else {
+      textoMensagem =
+        'Entrada de <strong>'+brl.format(ent)+'</strong> representa <strong>'+
+        f2((ent/total)*100)+'%</strong> do valor da dívida.';
+    }
+
+
+    tabela.innerHTML = '';
+    $('imprimir').disabled = true;
+    let opcoesExibidas = 0;
+    let maiorParcelaExibida = 0;
+    let houveBloqueioMinimo = false;
+
+    for(let n=1;n<=limite;n++){
+      let parcela = 0;
+
+      if (saldo > 0) {
+        if (taxa === 0) {
+          parcela = saldo/n;
+        } else {
+          parcela = saldo * (taxa*Math.pow(1+taxa,n)) / (Math.pow(1+taxa,n)-1);
+          // Margem conservadora de 0,10% para manter a simulação levemente acima do SAP.
+          parcela *= 1.001;
+        }
+      }
+
+      if (!baixaRenda && saldo > 0 && parcela < 50) {
+        houveBloqueioMinimo = true;
+        continue;
+      }
+
+      const totalParcelado = parcela*n;
+      const jurosTotal = Math.max(totalParcelado-saldo,0);
+      const montante = ent + totalParcelado;
+
+      opcoesExibidas++;
+      maiorParcelaExibida = n;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="parcelas">'+n+'x</td>'+
+        '<td>'+brl.format(parcela)+'</td>'+
+        '<td>'+brl.format(jurosTotal)+'</td>'+
+        '<td class="total">'+brl.format(montante)+'</td>';
+
+      tabela.appendChild(tr);
+    }
+
+    if (baixaRenda) {
+      tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + limite + 'x • Baixa renda';
+    } else if (opcoesExibidas > 0) {
+      tituloParcelas.textContent = 'Opções de parcelamento — 1x até ' + maiorParcelaExibida + 'x • Parcela mínima R$ 50,00';
+    } else {
+      tituloParcelas.textContent = 'Opções de parcelamento • Parcela mínima R$ 50,00';
+    }
+
+    if (houveBloqueioMinimo && total) {
+      textoMensagem += ' As opções que resultariam em parcela menor que <strong>R$ 50,00</strong> foram ocultadas.';
+    }
+
+    if (!baixaRenda && total && saldo > 0 && opcoesExibidas === 0) {
+      textoMensagem += ' <span class="low">Nenhuma opção disponível:</span> o saldo parcelado é inferior ao mínimo permitido de R$ 50,00.';
+    }
+
+    mensagem.innerHTML = textoMensagem;
+    $('imprimir').disabled = !(total > 0 && opcoesExibidas > 0);
+  }
+
+  divida.addEventListener('input', calcular);
+  juros.addEventListener('input', calcular);
+  maxParcelas.addEventListener('input', calcular);
+
+  entrada.addEventListener('input', () => {
+    origem='entrada';
+    calcular();
+  });
+
+  percentual.addEventListener('input', () => {
+    origem='percentual';
+    calcular();
+  });
+
+  [entrada, percentual, juros].forEach(el => {
+    el.addEventListener('blur', () => {
+      const v = nBR(el.value);
+      el.value = f2(v);
+      calcular();
+    });
+  });
+
+  maxParcelas.addEventListener('blur', () => {
+    let v = parseInt(maxParcelas.value,10);
+    if (!Number.isFinite(v)) v = 12;
+    v = Math.min(Math.max(v,1),18);
+    maxParcelas.value = v;
+    calcular();
+  });
+
+  $('imprimir').addEventListener('click', () => {
+    if ($('imprimir').disabled) return;
+    $('dataImpressao').textContent = 'Data da simulação: ' + new Date().toLocaleString('pt-BR');
+    window.print();
+  });
+  calcular();
+})();
+</script>
+</body>
+</html>
